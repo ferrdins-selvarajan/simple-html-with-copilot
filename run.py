@@ -5,9 +5,10 @@ import sys
 from pathlib import Path
 
 project_dir = Path(__file__).resolve().parent
-if importlib.util.find_spec("ruff") is None:
+required_modules = ("fastapi", "uvicorn", "ruff")
+if any(importlib.util.find_spec(module) is None for module in required_modules):
 	print(
-		"Ruff is not installed. Installing development dependencies...",
+		"Project dependencies are missing. Installing dependencies...",
 	)
 	install_result = subprocess.run(
 		[
@@ -15,6 +16,8 @@ if importlib.util.find_spec("ruff") is None:
 			"-m",
 			"pip",
 			"install",
+			"-r",
+			str(project_dir / "requirements.txt"),
 			"-r",
 			str(project_dir / "requirements-dev.txt"),
 		],

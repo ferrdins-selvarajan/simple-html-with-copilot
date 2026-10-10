@@ -25,14 +25,15 @@
           const response = await fetch("/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message: messageInput.value })
+            body: JSON.stringify({ text: messageInput.value })
           });
 
           if (!response.ok) {
             throw new Error(`Request failed: ${response.status}`);
           }
 
-          result.textContent = await response.text();
+          const data = await response.json();
+          result.textContent = data.checksum;
         } catch (error) {
           result.textContent = error.message;
         }

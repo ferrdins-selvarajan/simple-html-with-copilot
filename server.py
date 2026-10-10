@@ -1,47 +1,35 @@
-import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import base64  # noqa: F401
+import hashlib
+import os  # noqa: F401
 from pathlib import Path
 
+import uvicorn
+from fastapi import FastAPI
+from fastapi.responses import FileResponse
+from pydantic import BaseModel, ConfigDict
+
 INDEX_PATH = Path(__file__).with_name("index.html")
+app = FastAPI()
 
 
-class RequestHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path not in ("/", "/index.html"):
-            self.send_error(404)
-            return
+# Request model for text submitted to the generate endpoint.
+class Text(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
-        content = INDEX_PATH.read_bytes()
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(content)))
-        self.end_headers()
-        self.wfile.write(content)
+    text: str
 
-    def do_POST(self):
-        if self.path != "/generate":
-            self.send_error(404)
-            return
 
-        try:
-            content_length = int(self.headers.get("Content-Length", "0"))
-            payload = json.loads(self.rfile.read(content_length))
-            message = payload["message"]
-            if not isinstance(message, str):
-                raise ValueError("message must be a string")
-        except (json.JSONDecodeError, KeyError, ValueError):
-            self.send_error(400, "Expected JSON with a string message")
-            return
+@app.get("/", response_class=FileResponse)
+@app.get("/index.html", response_class=FileResponse)
+def index() -> FileResponse:
+    return FileResponse(INDEX_PATH)
 
-        response = f"Generated response for: {message}".encode("utf-8")
-        self.send_response(200)
-        self.send_header("Content-Type", "text/plain; charset=utf-8")
-        self.send_header("Content-Length", str(len(response)))
-        self.end_headers()
-        self.wfile.write(response)
+
+@app.post("/generate")
+def generate(payload: Text) -> dict[str, str]:
+    checksum = hashlib.sha256(payload.text.encode("utf-8")).hexdigest()
+    return {"checksum": checksum}
 
 
 if __name__ == "__main__":
-    server = ThreadingHTTPServer(("0.0.0.0", 8000), RequestHandler)
-    print("Serving on http://localhost:8000")
-    server.serve_forever()
+    uvicorn.run(app, host="0.0.0.0", port=8000)
