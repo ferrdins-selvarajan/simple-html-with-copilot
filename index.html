@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Simple Form</title>
+  </head>
+  <body>
+    <form>
+      <label for="message">Text</label>
+      <input type="text" id="message" name="message">
+      <button type="submit">Submit</button>
+    </form>
+    <div id="result" aria-live="polite"></div>
+    <script>
+      const form = document.querySelector("form");
+      const messageInput = document.querySelector("#message");
+      const result = document.querySelector("#result");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        result.textContent = "Sending...";
+
+        try {
+          const response = await fetch("/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: messageInput.value })
+          });
+
+          if (!response.ok) {
+            throw new Error(`Request failed: ${response.status}`);
+          }
+
+          result.textContent = await response.text();
+        } catch (error) {
+          result.textContent = error.message;
+        }
+      });
+    </script>
+  </body>
+</html>
